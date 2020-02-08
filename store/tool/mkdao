@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+
+i=$1
+
+# dao
+echo """
+func (*${i}) CheckOID(id string) (_id primitive.ObjectID, c int, m string, b bool) {
+	var e error
+	_id, e = primitive.ObjectIDFromHex(id)
+	if e != nil {
+		c, m, b = 1103, \"ObjectID格式非法\", false
+	} else {
+		b = true
+		if total, _ := dataC.${i}.CountDocuments(context.Background(), bson.M{\"_id\": _id}); total != 1 {
+			c, m, b = 1104, \"ObjectID不存在\", false
+		}
+	}
+	return
+}
+func (*${i}) Update(ctx context.Context, filter, update interface{}) (e error) {
+	if filter == nil {
+		filter = bson.M{}
+	}
+	if update == nil {
+		update = bson.M{}
+	}
+	_, e = dataC.${i}.UpdateMany(ctx, filter, update)
+	return
+}
+func (*${i}) Add(ctx context.Context, data interface{}) (e error) {
+	if data != nil {
+		_, e = dataC.${i}.InsertOne(ctx, data)
+	}
+	return
+}
+func (*${i}) Del(ctx context.Context, filter interface{}) (e error) {
+	if filter == nil {
+		filter = bson.M{}
+	}
+	_, e = dataC.${i}.DeleteMany(ctx, filter)
+	return
+}
+func (*${i}) Len(filter interface{}) (total int64) {
+	if filter == nil {
+		filter = bson.M{}
+	}
+	total, _ = dataC.${i}.CountDocuments(context.Background(), filter)
+	return
+}
+func (*${i}) Get(filter interface{}, opts ...*options.FindOneOptions) (op ${i}, e error) {
+	e = dataC.${i}.FindOne(context.Background(), filter, opts...).Decode(&op)
+	return
+}
+func (*${i}) GetAll(limit, page int, filter, sort, projection interface{}) (op []${i}, total int64, e error) {
+	ctx := context.Background()
+	switch limit {
+	case -1:
+		limit = 1<<63 - 1
+	case 0:
+		limit = 10
+	}
+	if filter == nil {
+		filter = bson.M{}
+	}
+	if sort == nil {
+		sort = bson.M{}
+	}
+	if projection == nil {
+		projection = bson.M{}
+	}
+	var cur *mongo.Cursor
+	cur, e = dataC.${i}.Find(ctx, filter, new(options.FindOptions).SetSort(sort).SetSkip(int64(limit*(page-1))).SetLimit(int64(limit)).SetProjection(projection))
+	if e != nil {
+		return
+	} else {
+		defer cur.Close(ctx)
+	}
+	if e = cur.All(ctx, &op); e != nil {
+		return
+	}
+	if len(op) == 0 {
+		op = []${i}{}
+	}
+	total, _ = dataC.${i}.CountDocuments(ctx, filter)
+	return
+}
+func (*${i}) GetAllAggregate(limit, page int,
+	match, sort interface{}, lookups ...store.AggregateLookup) (op []${i}, total int64, e error) {
+	if limit == -1 {
+		limit = 1<<63 - 1
+	}
+	if match == nil {
+		match = bson.M{}
+	}
+	if sort == nil {
+		sort = bson.M{\"_id\": -1}
+	}
+	pipeline := mongo.Pipeline{
+		{{Key: \"\$match\", Value: match}},
+	}
+	for _, al := range lookups {
+		pipeline = append(pipeline, mongo.Pipeline{
+			{{Key: \"\$lookup\", Value: bson.M{
+				\"from\": al.From,
+				\"let\":  al.Let,
+				\"pipeline\": mongo.Pipeline{
+					{{Key: \"\$match\", Value: bson.M{\"\$expr\": bson.M{\"\$eq\": al.Eq}}}},
+					{{Key: \"\$project\", Value: al.Project}},
+				},
+				\"as\": al.As,
+			}}},
+		}...)
+	}
+	pipeline = append(pipeline, mongo.Pipeline{
+		{{Key: \"\$sort\", Value: sort}},
+		{{Key: \"\$skip\", Value: limit * (page - 1)}},
+		{{Key: \"\$limit\", Value: limit}},
+	}...)
+	var ctx = context.Background()
+	var cur *mongo.Cursor
+	if cur, e = dataC.${i}.Aggregate(ctx, pipeline); e != nil {
+		return
+	} else {
+		defer cur.Close(ctx)
+		if e = cur.All(ctx, &op); e != nil {
+			return
+		}
+	}
+	return
+}
+""" >> z_dao.go

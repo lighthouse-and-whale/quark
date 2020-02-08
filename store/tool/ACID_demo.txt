@@ -1,0 +1,9 @@
+if err := dataC.DB.Client().UseSession(context.Background(), func(sessionContext mongo.SessionContext) error {
+    if err := sessionContext.StartTransaction(); err != nil {
+        _ = sessionContext.AbortTransaction(sessionContext)
+        return err
+    }
+    return sessionContext.CommitTransaction(sessionContext)
+}); err != nil {
+    panic(err)
+}
