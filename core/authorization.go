@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"log"
 	"time"
 )
 
@@ -48,11 +49,14 @@ func NewAccessToken(key []byte, data string, nbf, exp time.Duration) string {
 func VerifyAccessToken(token string) (user string, b bool) {
 	var vbs [][]byte
 	if str, e := base64.StdEncoding.DecodeString(token); e != nil {
-		return
+		if e != nil {
+			panic(e)
+		}
 	} else {
 		vbs = bytes.Split(str, []byte("."))
 	}
 	if len(vbs) != 2 {
+		log.Println("if len(vbs) != 2")
 		return
 	}
 	// 签名校验
@@ -62,7 +66,7 @@ func VerifyAccessToken(token string) (user string, b bool) {
 	// 抽取数据
 	var a AccessToken
 	if e := a.UnmarshalJSON(vbs[0]); e != nil {
-		return
+		panic(e)
 	}
 	// 是否生效
 	if time.Now().Unix() < a.N {
@@ -72,45 +76,7 @@ func VerifyAccessToken(token string) (user string, b bool) {
 	if time.Now().Unix() > a.E {
 		return
 	}
-	b = true
-	if b {
-		user = a.D
-	}
-	return
-}
-
-func VerifyAccessTokenAdmin(AdminATK []byte,token string) (user string, b bool) {
-	var vbs [][]byte
-	if str, e := base64.StdEncoding.DecodeString(token); e != nil {
-		return
-	} else {
-		vbs = bytes.Split(str, []byte("."))
-	}
-	if len(vbs) != 2 {
-		return
-	}
-	// 签名校验
-	if string(vbs[1]) != newSignature(AdminATK, vbs[0]) {
-		return
-	}
-	// 抽取数据
-	var a AccessToken
-	if e := a.UnmarshalJSON(vbs[0]); e != nil {
-		return
-	}
-	// 是否生效
-	if time.Now().Unix() < a.N {
-		return
-	}
-	// 是否过期
-	if time.Now().Unix() > a.E {
-		return
-	}
-	b = true
-	if b {
-		user = a.D
-	}
-	return
+	return a.D, true
 }
 
 //----------------------------------------------------------------------------------------------------------------------

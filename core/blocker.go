@@ -13,18 +13,18 @@ import (
 func UserRequestInterceptor(ct Context) error {
 	token := ct.GetAccessToken()
 
+	if token == "" {
+		return Next
+	}
+
 	// 令牌校验
-	if len(token) != 0 {
-		user, has := VerifyAccessToken(token)
-		if !has {
-			return ct.To401()
-		}
-		if user != "" {
-			ct.User = user
-			ct.Request.Header.Add(AccessTokenHeader, ct.User)
-		} else {
-			return Next
-		}
+	user, has := VerifyAccessToken(token)
+	if !has {
+		return ct.To401()
+	}
+	if user != "" {
+		ct.User = user
+		ct.Request.Header.Add(AccessTokenHeader, ct.User)
 	} else {
 		return Next
 	}
@@ -36,7 +36,7 @@ func UserRequestInterceptor(ct Context) error {
 
 	// 在线状态检测
 	if conn, has := online[ct.User]; !has {
-		//return ct.ToJson(1100, "当前状态为离线")
+		// return ct.ToJson(1100, "当前状态为离线")
 	} else {
 		if conn.Limit > 25 {
 			// 请求频繁锁定账户1分钟，5秒内请求超过25次

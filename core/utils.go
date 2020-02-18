@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/microcosm-cc/bluemonday"
+
 	//"github.com/chromedp/chromedp"
 	//"github.com/tidwall/gjson"
 	"io"
@@ -214,15 +216,14 @@ func OpenWeb(url string) {
 
 //----------------------------------------------------------------------------------------------------------------------
 
-// 给文本中的链接包装<a>标签
-// 该方法比较占用资源
+// 用户输入文本处理
+// 包含XSS过滤,链接可跳转处理
+// 落地HTML
 func TextareaFormat(src string) string {
-	src = strings.ReplaceAll(src, "<", "&lt;")
-	src = strings.ReplaceAll(src, ">", "&gt;")
-	src = strings.ReplaceAll(src, "\n", "<br>")
-	var urls = regexp.MustCompile(`(ftp|http|https)://[-A-Za-z0-9_./?=&#%]+[\w]`).FindAllString(src, 1000)
-	// 去除重复
-	var keys = make(map[string]bool)
+	src = bluemonday.UGCPolicy().Sanitize(src)
+	src = strings.ReplaceAll(src, "\n", "\n<br>\n")
+	urls := regexp.MustCompile(`(ftp|http|https)://[-A-Za-z0-9_./?=&#%]+[\w]`).FindAllString(src, -1)
+	keys := make(map[string]bool)
 	for i := range urls {
 		if _, has := keys[urls[i]]; !has {
 			keys[urls[i]] = true

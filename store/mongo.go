@@ -14,18 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/x/bsonx"
 )
 
-/*
-
-BSON (Binary JSON)
-CRUD and Operators
-ACID
-Aggregate
-Indexes
-Change Stream
-Make DAO
-
-*/
-
 // 数据写入模式
 // 1.  "w=0"          - 发起写操作，不关心是否成功
 // 2.  "w=2"          - 发起写操作，数据被写入指定数量的节点才算成功
@@ -49,20 +37,20 @@ const readConcern = "readConcern=majority"
 const readPreference = "readPreference=primaryPreferred"
 
 type AggregateLookup struct {
-	From    string
-	Let     bson.M
-	Eq      []interface{}
-	Project bson.M
-	As      string
+	From         string
+	LocalField   string
+	ForeignField string
+	As           string
+	Project      bson.M
 }
 
-func NewStorageDatabase(auth bool, nodes string, name, user, pwd string) *mongo.Database {
+func NewStorageDatabase(auth bool, nodes string, name, user, pwd, replicaSet string) *mongo.Database {
 	var client *mongo.Client
 	var err error
 	var urlString string
 	if auth {
-		format := "mongodb://%s:%s@%s/%s?%s&%s&%s"
-		urlString = fmt.Sprintf(format, user, pwd, nodes, name, writeConcern, readPreference, readConcern)
+		format := "mongodb://%s:%s@%s/%s?replicaSet=%s&%s&%s&%s"
+		urlString = fmt.Sprintf(format, user, pwd, nodes, name, replicaSet, writeConcern, readPreference, readConcern)
 	} else {
 		urlString = fmt.Sprintf("mongodb://%s", nodes)
 	}
@@ -82,7 +70,8 @@ func MongoIndexesCreateMany(coll *mongo.Collection, keys []string) {
 	models := make([]mongo.IndexModel, 0)
 	for _, item := range keys {
 		models = append(models, mongo.IndexModel{
-			Keys: bsonx.Doc{{Key: item, Value: bsonx.String("")}},
+			Keys:    bsonx.Doc{{Key: item, Value: bsonx.Int64(1)}},
+			Options: options.Index().SetBackground(true),
 		})
 	}
 	if _, err := coll.Indexes().CreateMany(context.Background(), models); err != nil {

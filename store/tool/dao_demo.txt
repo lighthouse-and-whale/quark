@@ -1,9 +1,3 @@
-#!/usr/bin/env bash
-
-i=$1
-
-# dao
-echo """
 func (*${i}) CheckOID(id string) (_id primitive.ObjectID, c int, m string, b bool) {
 var e error
 _id, e = primitive.ObjectIDFromHex(id)
@@ -84,4 +78,3 @@ return
 total, e = dataC.${i}.CountDocuments(ctx, match)
 return
 }
-""" >> z_dao.go

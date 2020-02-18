@@ -45,7 +45,7 @@ func (c Core) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer internalServerError(&c, w) // 错误追踪
 
 	// 全局请求头
-	w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Authorization, x-requested-with")
 	w.Header().Add("Access-Control-Allow-Origin", "*") // 跨域
 	w.Header().Add("Access-Control-Max-Age", "3600")   // OPTIONS 缓存时间
 

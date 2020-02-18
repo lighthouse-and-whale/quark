@@ -25,7 +25,7 @@ func NewError(e error, m string) {
 		time.Now().Local().Format("2006/01/02 15:04:05"), m, e.Error())
 	fmt.Println(text)
 	var f *os.File
-	f, e = os.OpenFile("errors.log", 0x2|0x400|0x40, 0600)
+	f, e = os.OpenFile("errors.txt", 0x2|0x400|0x40, 0600)
 	if e == nil {
 		_, _ = f.WriteString(text)
 		_ = f.Close()
